@@ -123,4 +123,28 @@ void main() {
       expect(r.first.target, startsWith('https://www.casaledeigelsi.it/'));
     });
   });
+
+  group('stesso dominio, export di Search Console', () {
+    final rows = matchSites(_load('torre-vecchio.csv'), _load('torre-nuovo.txt'));
+    String? target(String p) => rows.firstWhere((r) => r.from.path == p).target;
+
+    test('niente regole con il carattere jolly', () {
+      expect(rows.any((r) => r.from.original.contains('*')), isFalse);
+      expect(rows, hasLength(6));
+    });
+
+    test('le pagine finiscono dove devono', () {
+      expect(target('/en/rooms-list/blue-room/'), '/en/rooms');
+      expect(target('/en/rooms-list/il-palazzo/'), '/en/rooms');
+      expect(target('/en/structure/'), '/en/story');
+      expect(target('/en/rooms_type/camere/feed/'), '/en/rooms');
+      expect(target('/en/period-may-november/feed/'), '/en');
+      expect(target('/privacy/feed/'), '/');
+    });
+
+    test('stesso dominio: niente regola per il cambio di dominio', () {
+      final r = redirectsFrom(rows);
+      expect(r.every((x) => x.target.startsWith('/')), isTrue);
+    });
+  });
 }

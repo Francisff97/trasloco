@@ -49,7 +49,8 @@ List<String> extractUrls(String text) {
   final seen = <String>{};
   final out = <String>[];
   for (final u in raw) {
-    if (u.isEmpty || u.contains(' ')) continue;
+    // Spazi, e i caratteri jolly delle regole di robots.txt (es. /wp-content/*), non sono pagine.
+    if (u.isEmpty || u.contains(' ') || u.contains('*') || u.contains(r'$')) continue;
     final path = u.split('?').first;
     if (_assetRe.hasMatch(path)) continue;
     if (seen.add(u)) out.add(u);
@@ -166,6 +167,11 @@ const _phrases = {
   'about-us': 'about',
   'la-nostra-storia': 'about',
   'storia': 'about',
+  'story': 'about',
+  'our-story': 'about',
+  'structure': 'about',
+  'struttura': 'about',
+  'la-struttura': 'about',
   'contattaci': 'contatti',
   'contact-us': 'contatti',
   'dove-siamo': 'contatti',
@@ -221,10 +227,23 @@ String _canonical(String segment) {
   return _phrases[s] ?? s;
 }
 
+/// Code che non cambiano la pagina: /articolo/feed, /articolo/amp, /blog/page/2.
+const _tails = {'feed', 'rss', 'amp', 'embed', 'trackback', 'comments'};
+
 /// I pezzi del percorso, già normalizzati: "/en/Rooms/Camera-Doppia.html" → [en, camere, camera-doppia]
 List<String> segmentsOf(String key) {
   final path = key.split('?').first;
-  return path.split('/').where((p) => p.isNotEmpty).map(_canonical).where((p) => p.isNotEmpty).toList();
+  final segs = path.split('/').where((p) => p.isNotEmpty).map(_canonical).where((p) => p.isNotEmpty).toList();
+  while (segs.isNotEmpty) {
+    if (_tails.contains(segs.last)) {
+      segs.removeLast();
+    } else if (segs.length >= 2 && RegExp(r'^\d+$').hasMatch(segs.last) && segs[segs.length - 2] == 'page') {
+      segs.removeRange(segs.length - 2, segs.length);
+    } else {
+      break;
+    }
+  }
+  return segs;
 }
 
 List<String> _words(String segment) =>
@@ -402,13 +421,21 @@ void applyOptions(
     row
       ..status = MatchStatus.none
       ..isFallback = true;
-    if (fallbacks) row.target = fallbackFor(row.from, newUrls, options.fallback, rows: rows);
+    if (fallbacks) {
+      row.target = fallbackFor(row.from, newUrls, options.fallback, rows: rows, threshold: options.threshold);
+    }
   }
 }
 
 /// Ripiego: la sezione madre se esiste nel sito nuovo (o se è stata abbinata),
 /// altrimenti la home.
-String? fallbackFor(SiteUrl old, List<SiteUrl> newUrls, Fallback mode, {List<MatchRow> rows = const []}) {
+String? fallbackFor(
+  SiteUrl old,
+  List<SiteUrl> newUrls,
+  Fallback mode, {
+  List<MatchRow> rows = const [],
+  double threshold = 0.4,
+}) {
   switch (mode) {
     case Fallback.skip:
       return null;
@@ -428,6 +455,16 @@ String? fallbackFor(SiteUrl old, List<SiteUrl> newUrls, Fallback mode, {List<Mat
         if (hit != null) return hit.path;
         final viaOld = matched[key];
         if (viaOld != null) return viaOld;
+        // La sezione madre somiglia a una pagina nuova? (/en/rooms-list → /en/rooms)
+        if (parts.length > 1 || !languages.contains(parts.first)) {
+          final parent = SiteUrl.parse(key);
+          Candidate? best;
+          for (final n in newUrls) {
+            final sc = similarity(parent, n);
+            if (best == null || sc > best.score) best = Candidate(n, sc);
+          }
+          if (best != null && best.score >= threshold) return best.url.pathWithQuery;
+        }
       }
       // La home della stessa lingua, se c'è.
       final lang = parts.isNotEmpty && languages.contains(parts.first) ? parts.first : '';
