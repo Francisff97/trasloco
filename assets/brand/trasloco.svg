@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 512 512">
+<rect width="512" height="512" fill="#3A3ADD"/>
+<g fill="none" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M42 168 V96 a18 18 0 0 1 18 -18 H124" stroke="#EE6352" stroke-width="20"/>
+  <path d="M470 344 V416 a18 18 0 0 1 -18 18 H388" stroke="#EE6352" stroke-width="20"/>
+  <!-- la pagina vecchia, tratteggiata -->
+  <rect x="96" y="214" width="118" height="152" rx="20" stroke="#FFFFFF" stroke-opacity="0.55" stroke-width="18" stroke-dasharray="26 22"/>
+  <!-- la pagina nuova -->
+  <rect x="298" y="214" width="118" height="152" rx="20" stroke="#FFFFFF" stroke-width="22"/>
+  <path d="M328 262 H386 M328 296 H372" stroke="#FFFFFF" stroke-width="18"/>
+  <!-- il trasloco -->
+  <path d="M156 186 C176 116 300 104 342 170" stroke="#FFFFFF" stroke-width="22"/>
+  <path d="M306 168 L344 174 L352 136" stroke="#FFFFFF" stroke-width="22"/>
+</g></svg>
